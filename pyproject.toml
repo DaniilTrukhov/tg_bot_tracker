@@ -9,6 +9,7 @@ python = "^3.10"
 aiogram = "^2.25.1"
 pydantic = "^2.1.0"
 python-dotenv = "^1.0.0"
+schedule = "^1.2.0"
 
 
 [build-system]

@@ -45,6 +45,7 @@ async def write_answer(message: types.Message, state: FSMContext):
         print(message.from_user.id, type(message.from_user.id))
         await sqlite_db.create_user(message=message)
         await sqlite_db.create_tracking(message.from_user.id, state)
+        await sqlite_db.read_tracking(message.from_user.id)
         # await message.reply(str(data))
     await state.finish()
 
