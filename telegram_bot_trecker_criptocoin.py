@@ -1,4 +1,5 @@
-import time, schedule, threading
+import asyncio
+import schedule
 
 from aiogram import executor
 
@@ -14,22 +15,27 @@ other.register_handlers_other(dp=dp)
 async def on_startup(_):
     sqlite_db.start_bd()
     print("db is connect")
-    tracking.tracking_coin()
 
 
-
-"""asfasdfasdfasdfasdfasdf"""
-def mess():
-   print("Вызов из потока каждую минуту")
-
-def thr():
-   while True:
-      schedule.run_pending()
-      time.sleep(5)
-
-"""asdfasdfasdfasdfasdfasd"""
+async def scheduler():
+    schedule.every(5).seconds.do(lambda: asyncio.run_coroutine_threadsafe(tracking.tracking_coin(), loop))
+    while True:
+        schedule.run_pending()
+        await asyncio.sleep(1)
 
 if __name__ == '__main__':
-    schedule.every(30).seconds.do(mess)
-    threading.Thread(target=thr).start()
-    executor.start_polling(dp, skip_updates=True, on_startup=on_startup)
+    loop = asyncio.get_event_loop()
+
+    # Run on_startup first
+    loop.run_until_complete(on_startup(None))
+
+    # Create tasks for thr and scheduler
+    tasks = [
+        asyncio.ensure_future(scheduler()),
+        executor.start_polling(dp, skip_updates=True, on_startup=on_startup),
+    ]
+
+    # Start the loop to run the tasks
+    loop.run_until_complete(asyncio.gather(*tasks))
+
+    # Start the executor
