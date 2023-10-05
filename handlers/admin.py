@@ -1,5 +1,6 @@
 from aiogram import types, Dispatcher
 from aiogram.dispatcher import FSMContext
+from aiogram.dispatcher.filters import Text
 from aiogram.dispatcher.filters.state import State, StatesGroup
 
 from create_bot import dp
@@ -50,7 +51,21 @@ async def write_answer(message: types.Message, state: FSMContext):
     await state.finish()
 
 
+
+# @dp.message_handler(state="*", commands=["отмена",])
+# @dp.message_handler(Text(equals='отмена', ignore_case=True), state="*")
+async def cancel_fsm(message: types.Message, state: FSMContext):
+    current_state = await state.get_state()
+    if current_state is None:
+        return
+    await state.finish()
+    await message.reply("Oперация отменена")
+
+
 def register_handlers_admin(dp: Dispatcher):
+    dp.register_message_handler(cancel_fsm, state="*", commands="cancel")
+    dp.register_message_handler(cancel_fsm, Text(equals='cancel', ignore_case=True), state="*")
     dp.register_message_handler(cm_start, commands=["tracking"], state=None)
     dp.register_message_handler(check_price, state=FSMAdmin.coin)
     dp.register_message_handler(write_answer, state=FSMAdmin.price)
+

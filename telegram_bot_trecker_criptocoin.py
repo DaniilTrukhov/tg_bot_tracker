@@ -37,5 +37,3 @@ if __name__ == '__main__':
 
     # Start the loop to run the tasks
     loop.run_until_complete(asyncio.gather(*tasks))
-
-    # Start the executor
