@@ -1,8 +1,6 @@
-import asyncio
-import schedule
+import asyncio, schedule
 
 from aiogram import executor
-
 from data_base import sqlite_db
 from create_bot import dp
 from handlers import admin, other
@@ -19,6 +17,8 @@ async def on_startup(_):
 
 async def scheduler():
     schedule.every(5).seconds.do(lambda: asyncio.run_coroutine_threadsafe(tracking.tracking_coin(), loop))
+    schedule.every(10).seconds.do(lambda: asyncio.run_coroutine_threadsafe(tracking.install_names_dict(), loop))
+
     while True:
         schedule.run_pending()
         await asyncio.sleep(1)
@@ -34,4 +34,9 @@ if __name__ == '__main__':
     ]
 
     # Start the loop to run the tasks
-    loop.run_until_complete(asyncio.gather(*tasks))
+    try:
+        loop.run_forever()
+    except KeyboardInterrupt:
+        pass
+    finally:
+        loop.close()

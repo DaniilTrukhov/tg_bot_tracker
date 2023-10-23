@@ -3,24 +3,31 @@ import sqlite3
 from aiogram import types
 from aiogram.dispatcher import FSMContext
 
-from functions import tracking
+
+def execute_query(query, parameters=None):
+    try:
+        with sqlite3.connect(database='tgb_base.db', isolation_level=None) as base:
+            cursor = base.cursor()
+            if parameters:
+                cursor.execute(query, parameters)
+            else:
+                cursor.execute(query)
+    except Exception as e:
+        print(f"Ошибка выполнения запроса: {e}")
+    finally:
+        base.close()
 
 
 def start_bd():
-    global base, cursor
-    base = sqlite3.connect('tgb_base.db', isolation_level=None)
-    cursor = base.cursor()
-
-    cursor.execute('''
+    first_query = '''
         CREATE TABLE IF NOT EXISTS users (
             telegram_user_id INTEGER PRIMARY KEY,
             registration_date DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
             is_prime BOOLEAN DEFAULT False
         )
-    ''')
-
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS orders (
+    '''
+    execute_query(query=first_query)
+    sesond_query = '''CREATE TABLE IF NOT EXISTS orders (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             coin_name TEXT NOT NULL,
             target_price REAL NOT NULL,
@@ -30,18 +37,13 @@ def start_bd():
             archived BOOLEAN DEFAULT FALSE,
             user_id INTEGER,
             FOREIGN KEY (user_id) REFERENCES users (id)
-        )
-    ''')
-    base.commit()
-    base.close()
+        )'''
+    execute_query(query=sesond_query)
 
 
-async def create_user(message: types.Message):
-    base = sqlite3.connect('tgb_base.db', isolation_level=None)
-    cursor = base.cursor()
-    cursor.execute("INSERT OR IGNORE INTO users (telegram_user_id, is_prime) VALUES (?, ?)", (message.from_user.id, False))
-    base.commit()
-    base.close()
+async def create_user(user_id):
+    query = "INSERT OR IGNORE INTO users (telegram_user_id, is_prime) VALUES (?, ?)"
+    execute_query(query=query, parameters=(user_id, False))
 
 
 async def create_tracking(user_id: int, state: FSMContext):
@@ -52,36 +54,27 @@ async def create_tracking(user_id: int, state: FSMContext):
             uptrend = False
         else:
             uptrend = True
-    base = sqlite3.connect('tgb_base.db', isolation_level=None)
-    cursor = base.cursor()
-    cursor.execute("INSERT INTO orders (coin_name, target_price, uptrend, user_id) VALUES (?, ?, ?, ?)",
-                   (coin_name, target_price, uptrend, user_id))
-    base.commit()
-    base.close()
+    query = "INSERT INTO orders (coin_name, target_price, uptrend, user_id) VALUES (?, ?, ?, ?)"
+    execute_query(query=query, parameters=(coin_name, target_price, uptrend, user_id))
 
 
-def read_tracking():
-    base = sqlite3.connect('tgb_base.db', isolation_level=None)
-    cursor = base.cursor()
-    cursor.execute("SELECT * FROM orders WHERE archived = FALSE",)
-    orders = cursor.fetchall()
-    base.close()
-    return orders
+def read_tracked():
+    try:
+        base = sqlite3.connect('tgb_base.db', isolation_level=None)
+        cursor = base.cursor()
+        cursor.execute("SELECT * FROM orders WHERE archived = FALSE")
+        orders = cursor.fetchall()
+        return orders
+    except Exception as e:
+        print(f"Ошибка при чтении данных: {e}")
+    finally:
+        base.close()
 
 
 def update_order(id):
-    base = sqlite3.connect('tgb_base.db', isolation_level=None)
-    cursor = base.cursor()
-
-    cursor.execute('''
-        UPDATE orders
-        SET archived = TRUE, end_date = CURRENT_TIMESTAMP
-        WHERE id = ?;
-    ''', (id,))
-
-    base.commit()
+    query = "UPDATE orders SET archived = TRUE, end_date = CURRENT_TIMESTAMP WHERE id = ?;"
+    execute_query(query=query, parameters=(id,))
     print("Запись успешно обновлена.")
-    base.close()
 
 
 async def read_distinct_coin_name():

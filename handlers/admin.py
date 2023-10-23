@@ -21,39 +21,31 @@ class FSMAdmin(StatesGroup):
     price = State()
 
 
-# @dp.message_handler(commands=['tracking'])
 async def cm_start(message: types.Message):
     await FSMAdmin.coin.set()
     await message.answer("введите абривиатуру одной монеты(пример:btc)")
 
 
-# @dp.message_handler(state=FSMAdmin.coin)
 async def check_price(message: types.Message, state: FSMContext):
     async with state.proxy() as data:
-        data["price_coin"] = track_the_cost(message.text)
+        data["price_coin"] = await track_the_cost(message.text)
         print(type(data["price_coin"]))
         data["coin_name"] = message.text
     await FSMAdmin.next()
     await message.reply("Теперь введите нужную цену")
 
 
-# @dp.message_handler(state=FSMAdmin.price)
 async def write_answer(message: types.Message, state: FSMContext):
     async with state.proxy() as data:
         data["target_price"] = float(message.text)
         print(type(data["target_price"]))
     async with state.proxy() as data:
         print(message.from_user.id, type(message.from_user.id))
-        await sqlite_db.create_user(message=message)
+        await sqlite_db.create_user(user_id=message.from_user.id)
         await sqlite_db.create_tracking(message.from_user.id, state)
-        # await sqlite_db.read_tracking(message.from_user.id)
-        # await message.reply(str(data))
     await state.finish()
 
 
-
-# @dp.message_handler(state="*", commands=["отмена",])
-# @dp.message_handler(Text(equals='отмена', ignore_case=True), state="*")
 async def cancel_fsm(message: types.Message, state: FSMContext):
     current_state = await state.get_state()
     if current_state is None:
@@ -64,7 +56,7 @@ async def cancel_fsm(message: types.Message, state: FSMContext):
 
 def register_handlers_admin(dp: Dispatcher):
     dp.register_message_handler(cancel_fsm, state="*", commands="cancel")
-    dp.register_message_handler(cancel_fsm, Text(equals='cancel', ignore_case=True), state="*")
+    dp.register_message_handler(cancel_fsm, custom_filters=Text(equals='cancel', ignore_case=True), state="*")
     dp.register_message_handler(cm_start, commands=["tracking"], state=None)
     dp.register_message_handler(check_price, state=FSMAdmin.coin)
     dp.register_message_handler(write_answer, state=FSMAdmin.price)
