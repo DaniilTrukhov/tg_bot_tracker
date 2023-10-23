@@ -1,10 +1,19 @@
 import sqlite3
 
-from aiogram import types
-from aiogram.dispatcher import FSMContext
+from typing import List
 
 
-def execute_query(query, parameters=None):
+def execute_query(query, parameters=None)  -> None:
+    """
+        Executes a SQL query on the SQLite database.
+
+        Args:
+            query (str): The SQL query to be executed.
+            parameters (tuple): Optional parameters to be passed to the query.
+
+        Raises:
+            Exception: An exception is raised in case of an error during query execution.
+    """
     try:
         with sqlite3.connect(database='tgb_base.db', isolation_level=None) as base:
             cursor = base.cursor()
@@ -18,7 +27,10 @@ def execute_query(query, parameters=None):
         base.close()
 
 
-def start_bd():
+def start_bd()  -> None:
+    """
+        Initializes the SQLite database and creates necessary tables if they don't exist.
+    """
     first_query = '''
         CREATE TABLE IF NOT EXISTS users (
             telegram_user_id INTEGER PRIMARY KEY,
@@ -41,12 +53,25 @@ def start_bd():
     execute_query(query=sesond_query)
 
 
-async def create_user(user_id):
+async def create_user(user_id) -> None:
+    """
+        Asynchronously inserts or ignores the user into the 'users' table.
+
+        Args:
+            user_id (int): The Telegram user ID.
+    """
     query = "INSERT OR IGNORE INTO users (telegram_user_id, is_prime) VALUES (?, ?)"
     execute_query(query=query, parameters=(user_id, False))
 
 
-async def create_tracking(user_id: int, data: dict):
+async def create_tracking(user_id: int, data: dict)  -> None:
+    """
+        Asynchronously inserts a tracking order into the 'orders' table.
+
+        Args:
+            user_id (int): The Telegram user ID.
+            data (dict): A dictionary containing tracking order information.
+    """
     coin_name = data["coin_name"]
     target_price = data["target_price"]
     if data["price_coin"] > data["target_price"]:
@@ -57,7 +82,13 @@ async def create_tracking(user_id: int, data: dict):
     execute_query(query=query, parameters=(coin_name, target_price, uptrend, user_id))
 
 
-def read_tracked():
+def read_tracked() -> List:
+    """
+        Reads and returns the active tracking orders from the 'orders' table.
+
+        Returns:
+            list: A list of tuples representing active tracking orders.
+    """
     try:
         base = sqlite3.connect('tgb_base.db', isolation_level=None)
         cursor = base.cursor()
@@ -70,13 +101,24 @@ def read_tracked():
         base.close()
 
 
-def update_order(id):
+def update_order(id: int) -> None:
+    """
+        Updates the tracking order status to 'archived' with the end date.
+
+        Args:
+            id (int): The ID of the tracking order to be updated.
+    """
     query = "UPDATE orders SET archived = TRUE, end_date = CURRENT_TIMESTAMP WHERE id = ?;"
     execute_query(query=query, parameters=(id,))
-    print("Запись успешно обновлена.")
 
 
-async def read_distinct_coin_name():
+async def read_distinct_coin_name() -> dict:
+    """
+        Asynchronously reads distinct coin names from the 'orders' table.
+
+        Returns:
+            dict: A dictionary with distinct coin names as keys.
+    """
     base = sqlite3.connect('tgb_base.db', isolation_level=None)
     cursor = base.cursor()
     cursor.execute("SELECT DISTINCT coin_name FROM orders")

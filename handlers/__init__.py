@@ -1,2 +1,2 @@
-from handlers import admin
+from handlers import general
 from handlers import other

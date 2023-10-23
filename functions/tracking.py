@@ -7,19 +7,37 @@ data_with_names = dict()
 key = "https://api.binance.com/api/v3/ticker/price?symbol="
 
 
-async def install_names_dict():
+async def install_names_dict() -> None:
+    """
+        Asynchronously fetches distinct coin names from the database and updates the global data_with_names dictionary.
+    """
     global data_with_names
     new_data_with_names = await sqlite_db.read_distinct_coin_name()
     if len(new_data_with_names) != len(data_with_names):
         data_with_names = new_data_with_names
 
 
-async def return_answer_user(element):
+async def return_answer_user(element) -> None:
+    """
+        Asynchronously updates the order in the database and sends a message to the user about the coin reaching a specified price level.
+
+        Args:
+            element (tuple): A tuple representing the order information.
+    """
     sqlite_db.update_order(id=element[0])
     await asyncio.create_task(bot.send_message(chat_id=element[7], text=f"Mонета {element[1]} достигла уровня цены в {element[2]} USD"))
 
 
-async def track_the_cost(currency_name: str):
+async def track_the_cost(currency_name: str) -> float:
+    """
+        Asynchronously tracks the cost of a cryptocurrency using synchronous requests.
+
+        Args:
+            currency_name (str): The abbreviation of the cryptocurrency.
+
+        Returns:
+            float: The current price of the cryptocurrency.
+    """
     url = "".join([key, currency_name.upper(), "USDT"])
     data = requests.get(url).json()
     if data.get('price', None):
@@ -27,7 +45,16 @@ async def track_the_cost(currency_name: str):
     return None
 
 
-async def track_cost(currency_name: str):
+async def track_cost(currency_name: str) -> float:
+    """
+        Asynchronously tracks the cost of a cryptocurrency using aiohttp for better concurrency.
+
+        Args:
+            currency_name (str): The abbreviation of the cryptocurrency.
+
+        Returns:
+            float: The current price of the cryptocurrency.
+    """
     url = "".join([key, currency_name.upper(), "USDT"])
     async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(limit=10)) as session:
         async with session.get(url) as response:
@@ -35,7 +62,16 @@ async def track_cost(currency_name: str):
             return float(data['price']) if 'price' in data else None
 
 
-async def check_price(coin_dict):
+async def check_price(coin_dict: dict) -> dict:
+    """
+        Asynchronously checks the current price of multiple cryptocurrencies.
+
+        Args:
+            coin_dict (dict): A dictionary containing cryptocurrency abbreviations.
+
+        Returns:
+            dict: A dictionary containing cryptocurrency abbreviations as keys and their corresponding current prices.
+    """
     start_time = time.time()
     for coin_name in coin_dict:
         coin_dict[coin_name] = await track_cost(coin_name)
@@ -43,7 +79,10 @@ async def check_price(coin_dict):
     return coin_dict
 
 
-async def tracking_coin():
+async def tracking_coin() -> None:
+    """
+        Asynchronously tracks the prices of tracked cryptocurrencies and sends messages to users if specified price levels are reached.
+    """
     global data_with_names
     data_with_current_price = await check_price(data_with_names)
     data = sqlite_db.read_tracked()

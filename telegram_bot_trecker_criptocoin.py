@@ -3,19 +3,35 @@ import asyncio, schedule
 from aiogram import executor
 from data_base import sqlite_db
 from create_bot import dp
-from handlers import admin, other
+from handlers import general, other
 from functions import tracking
 
-admin.register_handlers_admin(dp=dp)
+# Register general and other handlers
+general.register_handlers_general(dp=dp)
 other.register_handlers_other(dp=dp)
 
 
 async def on_startup(_):
+    """
+    Function to be executed on startup.
+
+    Args:
+        _ (Any): Placeholder parameter.
+    """
     sqlite_db.start_bd()
-    print("db is connect")
+    print("Database is connected")
 
 
 async def scheduler():
+    """
+        Scheduler function for periodic tasks.
+
+        This function schedules two tasks to run every 15 and 30 seconds, respectively.
+        The tasks involve tracking coin prices and updating the names dictionary.
+
+        Note:
+            This function runs in an infinite loop and is intended to be executed as a separate task.
+        """
     schedule.every(15).seconds.do(lambda: asyncio.run_coroutine_threadsafe(tracking.tracking_coin(), loop))
     schedule.every(30).seconds.do(lambda: asyncio.run_coroutine_threadsafe(tracking.install_names_dict(), loop))
 

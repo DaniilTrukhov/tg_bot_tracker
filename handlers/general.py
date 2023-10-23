@@ -11,9 +11,10 @@ from data_base import sqlite_db
 @dp.message_handler(commands=['start', 'help'])
 async def send_welcome(message: types.Message):
     """
-    This handler will be called when user sends `/start` or `/help` command
+    Handler for the '/start' and '/help' commands.
+    This handler will be called when the user sends '/start' or '/help' command.
     """
-    await message.reply("Hi!\nI'm EchoBot!\nPowered by aiogram.")
+    await message.reply("Hi!\nI am a bot tracking cryptomonets by request!\nTo start tracking, enter \n/tracking \nPowered by aiogram.")
 
 
 class FSMAdmin(StatesGroup):
@@ -22,16 +23,22 @@ class FSMAdmin(StatesGroup):
 
 
 async def cm_start(message: types.Message):
+    """
+        Command handler for the '/tracking' command.
+        Initiates the process of tracking a cryptocurrency price.
+    """
     await FSMAdmin.coin.set()
     await message.answer("введите абривиатуру одной монеты(пример:btc)")
 
 
 async def check_price(message: types.Message, state: FSMContext):
+    """
+        Handler for checking the price of a cryptocurrency and prompting the user to enter the desired price.
+    """
     async with state.proxy() as data:
         result = await track_the_cost(message.text)
         if result:
             data["price_coin"] = result
-            print(result)
             coin_name = message.text.upper()
             data["coin_name"] = coin_name
             await FSMAdmin.next()
@@ -44,6 +51,9 @@ async def check_price(message: types.Message, state: FSMContext):
 
 
 async def write_answer(message: types.Message, state: FSMContext):
+    """
+        Handler for processing the user's input and registering the tracking of a cryptocurrency.
+    """
     try:
         async with state.proxy() as data:
             data["target_price"] = float(message.text.replace(',', '.'))
@@ -61,6 +71,9 @@ async def write_answer(message: types.Message, state: FSMContext):
 
 
 async def cancel_fsm(message: types.Message, state: FSMContext):
+    """
+        Handler for canceling the FSM operation.
+    """
     current_state = await state.get_state()
     if current_state is None:
         return
@@ -69,7 +82,10 @@ async def cancel_fsm(message: types.Message, state: FSMContext):
 
 
 
-def register_handlers_admin(dp: Dispatcher):
+def register_handlers_general(dp: Dispatcher):
+    """
+        Register admin-related handlers with the provided Dispatcher.
+    """
     dp.register_message_handler(cancel_fsm, state="*", commands="cancel")
     dp.register_message_handler(cancel_fsm, Text(equals='cancel', ignore_case=True), state="*")
     dp.register_message_handler(cm_start, commands=["tracking"], state=None)
