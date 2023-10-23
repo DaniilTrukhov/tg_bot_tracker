@@ -16,8 +16,8 @@ async def on_startup(_):
 
 
 async def scheduler():
-    schedule.every(5).seconds.do(lambda: asyncio.run_coroutine_threadsafe(tracking.tracking_coin(), loop))
-    schedule.every(10).seconds.do(lambda: asyncio.run_coroutine_threadsafe(tracking.install_names_dict(), loop))
+    schedule.every(15).seconds.do(lambda: asyncio.run_coroutine_threadsafe(tracking.tracking_coin(), loop))
+    schedule.every(30).seconds.do(lambda: asyncio.run_coroutine_threadsafe(tracking.install_names_dict(), loop))
 
     while True:
         schedule.run_pending()

@@ -4,6 +4,7 @@ from data_base import sqlite_db
 from create_bot import bot
 
 data_with_names = dict()
+key = "https://api.binance.com/api/v3/ticker/price?symbol="
 
 
 async def install_names_dict():
@@ -15,26 +16,22 @@ async def install_names_dict():
 
 async def return_answer_user(element):
     sqlite_db.update_order(id=element[0])
-    print(element)
     await asyncio.create_task(bot.send_message(chat_id=element[7], text=f"Mонета {element[1]} достигла уровня цены в {element[2]} USD"))
 
 
 async def track_the_cost(currency_name: str):
-    key = "https://api.binance.com/api/v3/ticker/price?symbol="
     url = "".join([key, currency_name.upper(), "USDT"])
     data = requests.get(url).json()
-    print(data)
     if data.get('price', None):
         return float(data['price'])
     return None
 
 
 async def track_cost(currency_name: str):
-    url = f"https://api.binance.com/api/v3/ticker/price?symbol={currency_name.upper()}USDT"
-    async with aiohttp.ClientSession() as session:
+    url = "".join([key, currency_name.upper(), "USDT"])
+    async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(limit=10)) as session:
         async with session.get(url) as response:
             data = await response.json()
-            print(data)
             return float(data['price']) if 'price' in data else None
 
 

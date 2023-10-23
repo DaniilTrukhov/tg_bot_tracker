@@ -46,14 +46,13 @@ async def create_user(user_id):
     execute_query(query=query, parameters=(user_id, False))
 
 
-async def create_tracking(user_id: int, state: FSMContext):
-    async with state.proxy() as data:
-        coin_name = data["coin_name"]
-        target_price = data["target_price"]
-        if data["price_coin"] > data["target_price"]:
-            uptrend = False
-        else:
-            uptrend = True
+async def create_tracking(user_id: int, data: dict):
+    coin_name = data["coin_name"]
+    target_price = data["target_price"]
+    if data["price_coin"] > data["target_price"]:
+        uptrend = False
+    else:
+        uptrend = True
     query = "INSERT INTO orders (coin_name, target_price, uptrend, user_id) VALUES (?, ?, ?, ?)"
     execute_query(query=query, parameters=(coin_name, target_price, uptrend, user_id))
 
