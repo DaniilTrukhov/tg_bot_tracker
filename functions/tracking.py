@@ -21,7 +21,8 @@ def track_the_cost(currency_name: str):
 
 
 async def tracking_coin():
-    data_with_current_price = sqlite_db.read_coins_names()
+    response_data = sqlite_db.read_distinct_coin_name()
+    data_with_current_price = sqlite_db.read_coins_names(response_data)
     data = sqlite_db.read_tracking()
     for element in data:
         print(data_with_current_price[element[1]], element[2], element[3])

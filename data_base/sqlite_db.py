@@ -69,19 +69,9 @@ def read_tracking():
     return orders
 
 
-def read_coins_names():
-    """
-    retern dict with all coin name in db with current price
-    :return:
-    """
-    base = sqlite3.connect('tgb_base.db', isolation_level=None)
-    cursor = base.cursor()
-    cursor.execute("SELECT DISTINCT coin_name FROM orders")
-    distinct_coin_names = cursor.fetchall()
-    base.close()
-    coin_dict = dict()
-    for coin_name in distinct_coin_names:
-        coin_dict[coin_name[0]] = tracking.track_the_cost(coin_name[0])
+def read_coins_names(coin_dict):
+    for coin_name in coin_dict:
+        coin_dict[coin_name] = tracking.track_the_cost(coin_name)
     return coin_dict
 
 
@@ -98,3 +88,15 @@ def update_order(id):
     base.commit()
     print("Запись успешно обновлена.")
     base.close()
+
+
+def read_distinct_coin_name():
+    base = sqlite3.connect('tgb_base.db', isolation_level=None)
+    cursor = base.cursor()
+    cursor.execute("SELECT DISTINCT coin_name FROM orders")
+    distinct_coin_names = cursor.fetchall()
+    base.close()
+    current_names_coins = dict()
+    for element in distinct_coin_names:
+        current_names_coins[element[0]] = None
+    return current_names_coins
