@@ -25,9 +25,7 @@ async def scheduler():
 
 if __name__ == '__main__':
     loop = asyncio.get_event_loop()
-
-    # Run on_startup first
-    # loop.run_until_complete(on_startup(None))
+    loop.run_until_complete(tracking.install_names_dict())
 
     # Create tasks for thr and scheduler
     tasks = [

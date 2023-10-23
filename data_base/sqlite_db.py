@@ -69,12 +69,6 @@ def read_tracking():
     return orders
 
 
-def read_coins_names(coin_dict):
-    for coin_name in coin_dict:
-        coin_dict[coin_name] = tracking.track_the_cost(coin_name)
-    return coin_dict
-
-
 def update_order(id):
     base = sqlite3.connect('tgb_base.db', isolation_level=None)
     cursor = base.cursor()
@@ -90,7 +84,7 @@ def update_order(id):
     base.close()
 
 
-def read_distinct_coin_name():
+async def read_distinct_coin_name():
     base = sqlite3.connect('tgb_base.db', isolation_level=None)
     cursor = base.cursor()
     cursor.execute("SELECT DISTINCT coin_name FROM orders")
