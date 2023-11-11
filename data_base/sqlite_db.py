@@ -27,7 +27,7 @@ def execute_query(query, parameters=None)  -> None:
         base.close()
 
 
-def start_bd()  -> None:
+def start_bd() -> None:
     """
         Initializes the SQLite database and creates necessary tables if they don't exist.
     """
@@ -35,7 +35,8 @@ def start_bd()  -> None:
         CREATE TABLE IF NOT EXISTS users (
             telegram_user_id INTEGER PRIMARY KEY,
             registration_date DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
-            is_prime BOOLEAN DEFAULT False
+            is_prime BOOLEAN DEFAULT False,
+            current_page_number INT DEFAULT 0
         )
     '''
     execute_query(query=first_query)
@@ -82,6 +83,23 @@ async def create_tracking(user_id: int, data: dict)  -> None:
     execute_query(query=query, parameters=(coin_name, target_price, uptrend, user_id))
 
 
+def read_user_tracking(user_id: int, page_number):
+    try:
+        base = sqlite3.connect('tgb_base.db', isolation_level=None)
+        cursor = base.cursor()
+        cursor.execute("SELECT * FROM orders WHERE archived = FALSE AND user_id = {user_id} LIMIT 5 OFFSET {page_number}".format(
+            user_id=user_id,
+            page_number=page_number
+        ))
+        orders = cursor.fetchall()
+        return orders
+    except Exception as e:
+        print(f"Ошибка при чтении данных: {e}")
+    finally:
+        base.close()
+
+
+
 def read_tracked() -> List:
     """
         Reads and returns the active tracking orders from the 'orders' table.
@@ -112,6 +130,21 @@ def update_order(id: int) -> None:
     execute_query(query=query, parameters=(id,))
 
 
+async def count_tracking_user(user_id: int) -> int:
+    try:
+        with sqlite3.connect(database='tgb_base.db', isolation_level=None) as base:
+            cursor = base.cursor()
+            cursor.execute("SELECT COUNT(*) FROM orders WHERE user_id = {user_id}".format(
+              user_id=user_id,
+            ))
+            count_tracking = cursor.fetchall()
+            return int(count_tracking[0][0])
+    except Exception as e:
+        print(f"Ошибка выполнения запроса: {e}")
+    finally:
+        base.close()
+
+
 async def read_distinct_coin_name() -> dict:
     """
         Asynchronously reads distinct coin names from the 'orders' table.
@@ -128,3 +161,32 @@ async def read_distinct_coin_name() -> dict:
     for element in distinct_coin_names:
         current_names_coins[element[0]] = None
     return current_names_coins
+
+
+async def get_page_number(user_id: int) -> int:
+    try:
+        with sqlite3.connect(database='tgb_base.db', isolation_level=None) as base:
+            cursor = base.cursor()
+            cursor.execute("SELECT current_page_number FROM users WHERE telegram_user_id = {user_id}".format(
+              user_id=user_id,
+            ))
+            current_page_number = cursor.fetchall()
+            return int(current_page_number[0][0])
+    except Exception as e:
+        print(f"Ошибка выполнения запроса: {e}")
+    finally:
+        base.close()
+
+
+async def update_current_page_number(new_page_number: int, user_id: int) -> None:
+    try:
+        with sqlite3.connect(database='tgb_base.db', isolation_level=None) as base:
+            cursor = base.cursor()
+            cursor.execute("UPDATE users SET current_page_number = {new_number} WHERE telegram_user_id = {user_id}".format(
+              new_number=new_page_number,
+              user_id=user_id,
+            ))
+    except Exception as e:
+        print(f"Ошибка выполнения запроса: {e}")
+    finally:
+        base.close()

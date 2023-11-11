@@ -1,7 +1,5 @@
 from aiogram import types, Dispatcher
 
-from create_bot import dp
-
 
 async def echo(message: types.Message):
     """
@@ -10,7 +8,7 @@ async def echo(message: types.Message):
         Args:
             message (types.Message): The incoming message object.
         """
-    await message.answer(f"{message.text} sdf")
+    await message.answer(f"{message.text}")
 
 
 def register_handlers_other(dp: Dispatcher):
