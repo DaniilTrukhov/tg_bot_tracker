@@ -83,21 +83,19 @@ async def create_tracking(user_id: int, data: dict)  -> None:
     execute_query(query=query, parameters=(coin_name, target_price, uptrend, user_id))
 
 
-def read_user_tracking(user_id: int, page_number):
+def read_user_tracking(user_id: int, page_number: int, count: int = 1):
     try:
         base = sqlite3.connect('tgb_base.db', isolation_level=None)
         cursor = base.cursor()
-        cursor.execute("SELECT * FROM orders WHERE archived = FALSE AND user_id = {user_id} LIMIT 5 OFFSET {page_number}".format(
+        cursor.execute("SELECT * FROM orders WHERE archived = FALSE AND user_id = {user_id} LIMIT {count} OFFSET {page_number}".format(
             user_id=user_id,
-            page_number=page_number
+            page_number=page_number,
+            count=count,
         ))
         orders = cursor.fetchall()
         return orders
     except Exception as e:
         print(f"Ошибка при чтении данных: {e}")
-    finally:
-        base.close()
-
 
 
 def read_tracked() -> List:
@@ -115,8 +113,6 @@ def read_tracked() -> List:
         return orders
     except Exception as e:
         print(f"Ошибка при чтении данных: {e}")
-    finally:
-        base.close()
 
 
 def update_order(id: int) -> None:
@@ -134,7 +130,7 @@ async def count_tracking_user(user_id: int) -> int:
     try:
         with sqlite3.connect(database='tgb_base.db', isolation_level=None) as base:
             cursor = base.cursor()
-            cursor.execute("SELECT COUNT(*) FROM orders WHERE user_id = {user_id}".format(
+            cursor.execute("SELECT COUNT(*) FROM orders WHERE user_id = {user_id} AND archived = 0".format(
               user_id=user_id,
             ))
             count_tracking = cursor.fetchall()
@@ -185,6 +181,20 @@ async def update_current_page_number(new_page_number: int, user_id: int) -> None
             cursor.execute("UPDATE users SET current_page_number = {new_number} WHERE telegram_user_id = {user_id}".format(
               new_number=new_page_number,
               user_id=user_id,
+            ))
+    except Exception as e:
+        print(f"Ошибка выполнения запроса: {e}")
+    finally:
+        base.close()
+
+
+async def update_price_order_in_db(order_id: int, new_price: float):
+    try:
+        with sqlite3.connect(database='tgb_base.db', isolation_level=None) as base:
+            cursor = base.cursor()
+            cursor.execute("UPDATE orders SET target_price = {new_price} WHERE id = {order_id}".format(
+              new_price=new_price,
+              order_id=order_id,
             ))
     except Exception as e:
         print(f"Ошибка выполнения запроса: {e}")
