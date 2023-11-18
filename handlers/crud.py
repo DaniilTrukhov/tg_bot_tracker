@@ -6,21 +6,23 @@ from aiogram.dispatcher.filters.state import State, StatesGroup
 from data_base import sqlite_db
 from functions.tracking import track_the_cost
 
+# Number of orders to display on each page
+count_orders_in_page = 4
 
+
+# Define the FSM states for creating, updating, and deleting orders
 class FSMCreate(StatesGroup):
     coin = State()
     price = State()
 
 
-class FSMUpdate1(StatesGroup):
-    update_price = State()
-
-
-class FSMUpdate2(StatesGroup):
-    update_price = State()
+class FSMUpdate(StatesGroup):
+    index_in_page = State()
+    new_price = State()
 
 
 class FSMDelete(StatesGroup):
+    index_in_page = State()
     confirm_delete = State()
 
 
@@ -30,7 +32,7 @@ async def cm_start(message: types.Message):
         Initiates the process of tracking a cryptocurrency price.
     """
     await FSMCreate.coin.set()
-    await message.answer("введите абривиатуру одной монеты(пример:btc)")
+    await message.answer("Введите абривиатуру одной монеты(пример:btc)")
 
 
 async def check_price(message: types.Message, state: FSMContext):
@@ -83,9 +85,10 @@ async def cancel_fsm(message: types.Message, state: FSMContext):
 
 
 async def view_user_orders(message: types.Message):
+    """ Handler for viewing user orders """
     try:
         user_id = message.from_user.id
-        user_orders = sqlite_db.read_user_tracking(user_id=user_id, page_number=0, count=2)
+        user_orders = sqlite_db.read_user_tracking(user_id=user_id, page_number=0, count=count_orders_in_page)
         count_orders = await sqlite_db.count_tracking_user(user_id=user_id)
         await sqlite_db.update_current_page_number(new_page_number=0, user_id=user_id)
         print(f"page_number = 0, count_orders = {count_orders}")
@@ -99,19 +102,20 @@ async def view_user_orders(message: types.Message):
 
 
 async def next_page_view_orders(message: types.Message):
+    """ Handler for navigating to the next page of user orders """
     try:
         message_string = ""
         user_id = message.from_user.id
         page_number = await sqlite_db.get_page_number(user_id=user_id)
         count_orders = await sqlite_db.count_tracking_user(user_id=user_id)
-        if count_orders <= page_number + 2:
+        if count_orders <= page_number + count_orders_in_page:
             new_page_number = 0
         else:
-            new_page_number = page_number + 2
-        if count_orders <= page_number + 4 and new_page_number != 0:
+            new_page_number = page_number + count_orders_in_page
+        if count_orders <= page_number + (count_orders_in_page * 2) and new_page_number != 0:
             message_string = "Конец списка отслеживаний"
         await sqlite_db.update_current_page_number(new_page_number=new_page_number, user_id=user_id)
-        user_orders = sqlite_db.read_user_tracking(user_id=user_id, page_number=new_page_number, count=2)
+        user_orders = sqlite_db.read_user_tracking(user_id=user_id, page_number=new_page_number, count=count_orders_in_page)
         print(f"page_number = {page_number}, count_orders = {count_orders}")
         if user_orders:
             for index, element in enumerate(user_orders):
@@ -124,55 +128,80 @@ async def next_page_view_orders(message: types.Message):
         print(f"Ошибка view_user_orders: {e}")
 
 
-async def update_users_order_1(message: types.Message):
+async def choice_order(message: types.Message, state):
+    """ Common logic for setting the state and prompting the user to enter the order number """
     try:
-        await FSMUpdate1.update_price.set()
-        user_id = message.from_user.id
-        page_number = await sqlite_db.get_page_number(user_id=user_id)
-        user_order = sqlite_db.read_user_tracking(user_id=user_id, page_number=page_number, count=1)
-        await message.answer(text=f"Обновить ордер, \nid={user_order[0][0]}\ncoin_name={user_order[0][1]}\ncoin_price={user_order[0][2]}?\nКакую цену установим?")
+        await state.set()
+        await message.answer(text="Введите номер отслеживания")
     except Exception as e:
-        print(f"Ошибка update_users_orders_1: {e}")
+        print(f"Ошибка choice_update_order: {e}")
 
 
-async def update_price_order_1(message: types.Message, state: FSMContext):
-    """
-
-    """
-    user_id = message.from_user.id
-    page_number = await sqlite_db.get_page_number(user_id=user_id)
-    user_order = sqlite_db.read_user_tracking(user_id=user_id, page_number=page_number, count=1)
-    new_price = float(message.text.replace(',', '.'))
-    await sqlite_db.update_price_order_in_db(order_id=user_order[0][0], new_price=new_price)
-    await state.finish()
-    await message.answer(text=f"Ордер успешно обновлен, \nМонета {user_order[0][1]}\nотслеживается до цены {new_price}")
-
-
-async def update_users_order_2(message: types.Message):
+async def get_id(message: types.Message, state: FSMContext, first_part, second_part):
+    """ Common logic for getting the order ID and displaying relevant information """
     try:
-        await FSMUpdate2.update_price.set()
-        user_id = message.from_user.id
-        page_number = await sqlite_db.get_page_number(user_id=user_id) + 1
-        user_order = sqlite_db.read_user_tracking(user_id=user_id, page_number=page_number, count=1)
-        await message.answer(text=f"Обновить ордер, \nid={user_order[0][0]}\ncoin_name={user_order[0][1]}\ncoin_price={user_order[0][2]}?\nКакую цену установим?")
+        async with state.proxy() as data:
+            page_number = await sqlite_db.get_page_number(user_id=message.from_user.id)
+            page_number += int(message.text)
+            user_order = sqlite_db.read_user_tracking(user_id=message.from_user.id, page_number=page_number, count=1)
+            data["order_id"] = user_order[0][0]
+            await message.answer(text='\n'.join([first_part, f"{user_order}", second_part]))
     except Exception as e:
-        print(f"Ошибка update_users_orders_2: {e}")
+        print(f"Ошибка get_id: {e}")
 
 
-async def update_price_order_2(message: types.Message, state: FSMContext):
-    """
+# Handler for initiating the update of a tracked order
+async def choice_update_order(message: types.Message):
+    await choice_order(message=message, state=FSMUpdate.index_in_page)
 
-    """
-    user_id = message.from_user.id
-    page_number = await sqlite_db.get_page_number(user_id=user_id) + 1
-    user_order = sqlite_db.read_user_tracking(user_id=user_id, page_number=page_number, count=1)
-    new_price = float(message.text.replace(',', '.'))
-    await sqlite_db.update_price_order_in_db(order_id=user_order[0][0], new_price=new_price)
-    await state.finish()
-    await message.answer(text=f"Ордер успешно обновлен, \nМонета {user_order[0][1]}\nотслеживается до цены {new_price}")
+
+# Handler for updating the price of a tracked order
+async def update_price_order(message: types.Message, state: FSMContext):
+    await get_id(message=message, state=state, first_part="Вы обновляете ордер", second_part="Введите новую цену")
+    await FSMUpdate.next()
+
+
+# Handler for finishing the update of a tracked order
+async def finish_update(message: types.Message, state: FSMContext):
+    try:
+        async with state.proxy() as data:
+            new_price = float(message.text.replace(',', '.'))
+            await sqlite_db.update_price_order_in_db(order_id=data["order_id"], new_price=new_price)
+            await state.finish()
+            await message.answer(text="Ордер обновлен")
+    except Exception as e:
+        print(f"Ошибка finish_update: {e}")
+
+
+# Handler for initiating the deletion of a tracked order
+async def choice_delete_order(message: types.Message):
+    await choice_order(message=message, state=FSMDelete.index_in_page)
+
+
+# Handler for confirming the deletion of a tracked order
+async def confirm_delete_order(message: types.Message, state: FSMContext):
+    await get_id(message=message, state=state, first_part="Вы хотите удалить отслеживание", second_part="Вы действительно хотите удалить это отслеживание?")
+    await FSMDelete.next()
+
+
+# Handler for finishing the deletion of a tracked order
+async def finish_delete(message: types.Message, state: FSMContext):
+    try:
+        async with state.proxy() as data:
+            if message.text.lower() == "yes":
+                await sqlite_db.delete_order_in_db(order_id=data["order_id"])
+                await message.reply(text="Ордер удален")
+            else:
+                await message.reply(text="Вы не стали удалять ордер, он все еще в работе")
+            await state.finish()
+    except Exception as e:
+        print(f"Ошибка finish_delete: {e}")
 
 
 def register_handler_crud(dp: Dispatcher):
+    """
+        # Register all the handlers with the dispatcher
+    """
     dp.register_message_handler(cancel_fsm, state="*", commands="cancel")
     dp.register_message_handler(cancel_fsm, Text(equals='cancel', ignore_case=True), state="*")
     dp.register_message_handler(view_user_orders, commands=['view'])
@@ -180,7 +209,9 @@ def register_handler_crud(dp: Dispatcher):
     dp.register_message_handler(cm_start, commands=["tracking"], state=None)
     dp.register_message_handler(check_price, state=FSMCreate.coin)
     dp.register_message_handler(write_answer, state=FSMCreate.price)
-    dp.register_message_handler(update_users_order_1, commands=["update1"], state=None)
-    dp.register_message_handler(update_price_order_1, state=FSMUpdate1.update_price)
-    dp.register_message_handler(update_users_order_2, commands=["update2"], state=None)
-    dp.register_message_handler(update_price_order_2, state=FSMUpdate2.update_price)
+    dp.register_message_handler(choice_update_order, commands=["update"], state=None)
+    dp.register_message_handler(update_price_order, state=FSMUpdate.index_in_page)
+    dp.register_message_handler(finish_update, state=FSMUpdate.new_price)
+    dp.register_message_handler(choice_delete_order, commands=["delete"], state=None)
+    dp.register_message_handler(confirm_delete_order, state=FSMDelete.index_in_page)
+    dp.register_message_handler(finish_delete, state=FSMDelete.confirm_delete)

@@ -3,7 +3,7 @@ import sqlite3
 from typing import List
 
 
-def execute_query(query, parameters=None)  -> None:
+def execute_query(query, parameters=None) -> None:
     """
         Executes a SQL query on the SQLite database.
 
@@ -22,9 +22,7 @@ def execute_query(query, parameters=None)  -> None:
             else:
                 cursor.execute(query)
     except Exception as e:
-        print(f"Ошибка выполнения запроса: {e}")
-    finally:
-        base.close()
+        print(f"Ошибка выполнения запроса\nexecute_query\n: {e}")
 
 
 def start_bd() -> None:
@@ -61,11 +59,14 @@ async def create_user(user_id) -> None:
         Args:
             user_id (int): The Telegram user ID.
     """
-    query = "INSERT OR IGNORE INTO users (telegram_user_id, is_prime) VALUES (?, ?)"
-    execute_query(query=query, parameters=(user_id, False))
+    try:
+        query = "INSERT OR IGNORE INTO users (telegram_user_id, is_prime) VALUES (?, ?)"
+        execute_query(query=query, parameters=(user_id, False))
+    except Exception as e:
+        print(f"Ошибка при чтении данных\ncreate_user\n: {e}")
 
 
-async def create_tracking(user_id: int, data: dict)  -> None:
+async def create_tracking(user_id: int, data: dict) -> None:
     """
         Asynchronously inserts a tracking order into the 'orders' table.
 
@@ -73,29 +74,31 @@ async def create_tracking(user_id: int, data: dict)  -> None:
             user_id (int): The Telegram user ID.
             data (dict): A dictionary containing tracking order information.
     """
-    coin_name = data["coin_name"]
-    target_price = data["target_price"]
-    if data["price_coin"] > data["target_price"]:
-        uptrend = False
-    else:
-        uptrend = True
-    query = "INSERT INTO orders (coin_name, target_price, uptrend, user_id) VALUES (?, ?, ?, ?)"
-    execute_query(query=query, parameters=(coin_name, target_price, uptrend, user_id))
-
+    try:
+        coin_name = data["coin_name"]
+        target_price = data["target_price"]
+        if data["price_coin"] > data["target_price"]:
+            uptrend = False
+        else:
+            uptrend = True
+        query = "INSERT INTO orders (coin_name, target_price, uptrend, user_id) VALUES (?, ?, ?, ?)"
+        execute_query(query=query, parameters=(coin_name, target_price, uptrend, user_id))
+    except Exception as e:
+        print(f"Ошибка при чтении данных\ncreate_tracking\n: {e}")
 
 def read_user_tracking(user_id: int, page_number: int, count: int = 1):
     try:
-        base = sqlite3.connect('tgb_base.db', isolation_level=None)
-        cursor = base.cursor()
-        cursor.execute("SELECT * FROM orders WHERE archived = FALSE AND user_id = {user_id} LIMIT {count} OFFSET {page_number}".format(
-            user_id=user_id,
-            page_number=page_number,
-            count=count,
-        ))
-        orders = cursor.fetchall()
-        return orders
+        with sqlite3.connect('tgb_base.db', isolation_level=None) as base:
+            cursor = base.cursor()
+            cursor.execute("SELECT * FROM orders WHERE archived = FALSE AND user_id = {user_id} LIMIT {count} OFFSET {page_number}".format(
+                user_id=user_id,
+                page_number=page_number,
+                count=count,
+            ))
+            orders = cursor.fetchall()
+            return orders
     except Exception as e:
-        print(f"Ошибка при чтении данных: {e}")
+        print(f"Ошибка при чтении данных\nread_user_tracking\n: {e}")
 
 
 def read_tracked() -> List:
@@ -106,13 +109,13 @@ def read_tracked() -> List:
             list: A list of tuples representing active tracking orders.
     """
     try:
-        base = sqlite3.connect('tgb_base.db', isolation_level=None)
-        cursor = base.cursor()
-        cursor.execute("SELECT * FROM orders WHERE archived = FALSE")
-        orders = cursor.fetchall()
-        return orders
+        with sqlite3.connect('tgb_base.db', isolation_level=None) as base:
+            cursor = base.cursor()
+            cursor.execute("SELECT * FROM orders WHERE archived = FALSE")
+            orders = cursor.fetchall()
+            return orders
     except Exception as e:
-        print(f"Ошибка при чтении данных: {e}")
+        print(f"Ошибка при чтении данных\nread_tracked\n: {e}")
 
 
 def update_order(id: int) -> None:
@@ -122,8 +125,12 @@ def update_order(id: int) -> None:
         Args:
             id (int): The ID of the tracking order to be updated.
     """
-    query = "UPDATE orders SET archived = TRUE, end_date = CURRENT_TIMESTAMP WHERE id = ?;"
-    execute_query(query=query, parameters=(id,))
+    try:
+        query = "UPDATE orders SET archived = TRUE, end_date = CURRENT_TIMESTAMP WHERE id = ?;"
+        execute_query(query=query, parameters=(id,))
+    except Exception as e:
+        print(f"Ошибка выполнения запроса\nupdate_order\n: {e}")
+
 
 
 async def count_tracking_user(user_id: int) -> int:
@@ -136,9 +143,7 @@ async def count_tracking_user(user_id: int) -> int:
             count_tracking = cursor.fetchall()
             return int(count_tracking[0][0])
     except Exception as e:
-        print(f"Ошибка выполнения запроса: {e}")
-    finally:
-        base.close()
+        print(f"Ошибка выполнения запроса\ncount_tracking_user\n: {e}")
 
 
 async def read_distinct_coin_name() -> dict:
@@ -148,15 +153,17 @@ async def read_distinct_coin_name() -> dict:
         Returns:
             dict: A dictionary with distinct coin names as keys.
     """
-    base = sqlite3.connect('tgb_base.db', isolation_level=None)
-    cursor = base.cursor()
-    cursor.execute("SELECT DISTINCT coin_name FROM orders")
-    distinct_coin_names = cursor.fetchall()
-    base.close()
-    current_names_coins = dict()
-    for element in distinct_coin_names:
-        current_names_coins[element[0]] = None
-    return current_names_coins
+    try:
+        with sqlite3.connect(database='tgb_base.db', isolation_level=None) as base:
+            cursor = base.cursor()
+            cursor.execute("SELECT DISTINCT coin_name FROM orders")
+            distinct_coin_names = cursor.fetchall()
+            current_names_coins = dict()
+            for element in distinct_coin_names:
+                current_names_coins[element[0]] = None
+            return current_names_coins
+    except Exception as e:
+        print(f"Ошибка выполнения запроса\nread_distinct_coin_name\n: {e}")
 
 
 async def get_page_number(user_id: int) -> int:
@@ -169,9 +176,7 @@ async def get_page_number(user_id: int) -> int:
             current_page_number = cursor.fetchall()
             return int(current_page_number[0][0])
     except Exception as e:
-        print(f"Ошибка выполнения запроса: {e}")
-    finally:
-        base.close()
+        print(f"Ошибка выполнения запроса\nget_page_number\n: {e}")
 
 
 async def update_current_page_number(new_page_number: int, user_id: int) -> None:
@@ -183,9 +188,7 @@ async def update_current_page_number(new_page_number: int, user_id: int) -> None
               user_id=user_id,
             ))
     except Exception as e:
-        print(f"Ошибка выполнения запроса: {e}")
-    finally:
-        base.close()
+        print(f"Ошибка выполнения запроса \nupdate_current_page_number\n: {e}")
 
 
 async def update_price_order_in_db(order_id: int, new_price: float):
@@ -197,6 +200,13 @@ async def update_price_order_in_db(order_id: int, new_price: float):
               order_id=order_id,
             ))
     except Exception as e:
-        print(f"Ошибка выполнения запроса: {e}")
-    finally:
-        base.close()
+        print(f"Ошибка выполнения запроса на обновление записи: {e}")
+
+
+async def delete_order_in_db(order_id: int):
+    try:
+        with sqlite3.connect(database='tgb_base.db', isolation_level=None) as base:
+            cursor = base.cursor()
+            cursor.execute("DELETE FROM orders WHERE id = {order_id}".format(order_id=order_id))
+    except Exception as e:
+        print(f"Ошибка выполнения запроса на удаление записи: {e}")
