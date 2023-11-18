@@ -1,6 +1,6 @@
 import sqlite3
 
-from typing import List
+from typing import List, Tuple
 
 
 def execute_query(query, parameters=None) -> None:
@@ -86,7 +86,19 @@ async def create_tracking(user_id: int, data: dict) -> None:
     except Exception as e:
         print(f"Ошибка при чтении данных\ncreate_tracking\n: {e}")
 
-def read_user_tracking(user_id: int, page_number: int, count: int = 1):
+
+def read_user_tracking(user_id: int, page_number: int, count: int = 1) -> List[Tuple]:
+    """
+    Reads and returns a specified number of tracking orders for a given user and page.
+
+    Args:
+        user_id (int): The ID of the user whose orders are to be retrieved.
+        page_number (int): The page number of orders to be retrieved.
+        count (int, optional): The number of orders to retrieve (default is 1).
+
+    Returns:
+        List[Tuple]: A list of tuples representing tracking orders for the user.
+    """
     try:
         with sqlite3.connect('tgb_base.db', isolation_level=None) as base:
             cursor = base.cursor()
@@ -134,6 +146,15 @@ def update_order(id: int) -> None:
 
 
 async def count_tracking_user(user_id: int) -> int:
+    """
+    Asynchronously counts the number of active tracking orders for a given user.
+
+    Args:
+        user_id (int): The ID of the user.
+
+    Returns:
+        int: The count of active tracking orders for the user.
+    """
     try:
         with sqlite3.connect(database='tgb_base.db', isolation_level=None) as base:
             cursor = base.cursor()
@@ -167,6 +188,15 @@ async def read_distinct_coin_name() -> dict:
 
 
 async def get_page_number(user_id: int) -> int:
+    """
+        Asynchronously retrieves the current page number for a user.
+
+        Args:
+            user_id (int): The ID of the user.
+
+        Returns:
+            int: The current page number for the user.
+    """
     try:
         with sqlite3.connect(database='tgb_base.db', isolation_level=None) as base:
             cursor = base.cursor()
@@ -180,6 +210,13 @@ async def get_page_number(user_id: int) -> int:
 
 
 async def update_current_page_number(new_page_number: int, user_id: int) -> None:
+    """
+    Asynchronously updates the current page number for a user in the database.
+
+    Args:
+        new_page_number (int): The new page number to be set.
+        user_id (int): The ID of the user.
+    """
     try:
         with sqlite3.connect(database='tgb_base.db', isolation_level=None) as base:
             cursor = base.cursor()
@@ -191,7 +228,14 @@ async def update_current_page_number(new_page_number: int, user_id: int) -> None
         print(f"Ошибка выполнения запроса \nupdate_current_page_number\n: {e}")
 
 
-async def update_price_order_in_db(order_id: int, new_price: float):
+async def update_price_order_in_db(order_id: int, new_price: float) -> None:
+    """
+    Asynchronously updates the target price of a tracking order in the database.
+
+    Args:
+        order_id (int): The ID of the order to be updated.
+        new_price (float): The new target price for the order.
+    """
     try:
         with sqlite3.connect(database='tgb_base.db', isolation_level=None) as base:
             cursor = base.cursor()
@@ -203,7 +247,13 @@ async def update_price_order_in_db(order_id: int, new_price: float):
         print(f"Ошибка выполнения запроса на обновление записи: {e}")
 
 
-async def delete_order_in_db(order_id: int):
+async def delete_order_in_db(order_id: int) -> None:
+    """
+    Asynchronously deletes a tracking order from the database.
+
+    Args:
+        order_id (int): The ID of the order to be deleted.
+    """
     try:
         with sqlite3.connect(database='tgb_base.db', isolation_level=None) as base:
             cursor = base.cursor()
