@@ -144,7 +144,6 @@ def update_order(id: int) -> None:
         print(f"Ошибка выполнения запроса\nupdate_order\n: {e}")
 
 
-
 async def count_tracking_user(user_id: int) -> int:
     """
     Asynchronously counts the number of active tracking orders for a given user.

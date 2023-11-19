@@ -28,7 +28,7 @@ async def return_answer_user(element) -> None:
     await asyncio.create_task(bot.send_message(chat_id=element[7], text=f"Mонета {element[1]} достигла уровня цены в {element[2]} USD"))
 
 
-async def track_the_cost(currency_name: str) -> float:
+async def check_the_cost(currency_name: str) -> float:
     """
         Asynchronously tracks the cost of a cryptocurrency using synchronous requests.
 
@@ -45,7 +45,7 @@ async def track_the_cost(currency_name: str) -> float:
     return None
 
 
-async def track_cost(currency_name: str) -> float:
+async def check_cost(currency_name: str) -> float:
     """
         Asynchronously tracks the cost of a cryptocurrency using aiohttp for better concurrency.
 
@@ -74,8 +74,8 @@ async def check_price(coin_dict: dict) -> dict:
     """
     start_time = time.time()
     for coin_name in coin_dict:
-        coin_dict[coin_name] = await track_cost(coin_name)
-    print(time.time() - start_time)
+        coin_dict[coin_name] = await check_cost(coin_name)
+    print(round(time.time() - start_time, 2), "sec", sep="")
     return coin_dict
 
 
