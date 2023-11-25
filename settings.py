@@ -15,3 +15,4 @@ class AllSettings:
             api_token (StrictStr): API token loaded from environment variables.
         """
     api_token: StrictStr = os.getenv("API_TOKEN", None)
+    api_url: StrictStr = os.getenv("API_URL", None)

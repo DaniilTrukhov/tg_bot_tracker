@@ -7,9 +7,6 @@ from data_base import sqlite_db
 from functions.tracking import check_the_cost
 from keyboards import client_kb
 
-# Number of orders to display on each page
-count_orders_in_page = 4
-
 
 # Define the FSM states for creating, updating, and deleting orders
 class FSMCreate(StatesGroup):
@@ -93,55 +90,6 @@ async def cancel_fsm(message: types.Message, state: FSMContext):
     await message.reply(text=answer_string, reply_markup=client_kb.tracking_view_price_keyboard)
 
 
-async def view_user_orders(message: types.Message):
-    """ Handler for viewing user orders """
-    try:
-        user_id = message.from_user.id
-        user_orders = sqlite_db.read_user_tracking(user_id=user_id, page_number=0, count=count_orders_in_page)
-        await sqlite_db.update_current_page_number(new_page_number=0, user_id=user_id)
-        if user_orders:
-            answer_string = ""
-            for index, element in enumerate(user_orders, start=1):
-                answer_string = "\n\n".join([answer_string, f"{index}. Для {element[1]} ожидается {element[2]}"])
-            await message.answer(text=answer_string, reply_markup=client_kb.next_keyboard)
-        else:
-            await message.reply(text="У вас еще нет отслеживаний монет", reply_markup=client_kb.tracking_keyboard)
-    except Exception as e:
-        print(f"Ошибка view_user_orders: {e}")
-
-
-async def next_page_view_orders(message: types.Message):
-    """ Handler for navigating to the next page of user orders """
-    try:
-        message_string = ""
-        user_id = message.from_user.id
-        page_number = await sqlite_db.get_page_number(user_id=user_id)
-        count_orders = await sqlite_db.count_tracking_user(user_id=user_id)
-        if count_orders <= page_number + count_orders_in_page:
-            new_page_number = 0
-        else:
-            new_page_number = page_number + count_orders_in_page
-        if ((count_orders <= page_number + (count_orders_in_page * 2) and new_page_number != 0)
-                or count_orders <= count_orders_in_page):
-            message_string = "Конец списка отслеживаний"
-        await sqlite_db.update_current_page_number(new_page_number=new_page_number, user_id=user_id)
-        user_orders = sqlite_db.read_user_tracking(user_id=user_id, page_number=new_page_number,
-                                                   count=count_orders_in_page)
-        if user_orders:
-            answer_string = ""
-            for index, element in enumerate(user_orders, start=new_page_number + 1):
-                answer_string = "\n\n".join([
-                    answer_string, f"{index}. Для {element[1]} ожидается {element[2]}"
-                ])
-            if message_string:
-                answer_string = "\n\n".join([answer_string, message_string])
-            await message.answer(text=answer_string, reply_markup=client_kb.next_keyboard)
-        else:
-            await message.reply(text="У вас еще нет отслеживаний монет")
-    except Exception as e:
-        print(f"Ошибка view_user_orders: {e}")
-
-
 async def choice_order(message: types.Message, state):
     """ Common logic for setting the state and prompting the user to enter the order number """
     try:
@@ -177,12 +125,11 @@ async def get_id(message: types.Message, state: FSMContext, first_part: str,
         print(f"Ошибка get_id: {e}")
 
 
-# Handler for initiating the update of a tracked order
 async def choice_update_order(message: types.Message):
     await choice_order(message=message, state=FSMUpdate.index_in_page)
 
 
-# Handler for updating the price of a tracked order
+# Handler for initiating the update of a tracked order
 async def update_price_order(message: types.Message, state: FSMContext):
     if await get_id(
             message=message,
@@ -193,7 +140,7 @@ async def update_price_order(message: types.Message, state: FSMContext):
         await FSMUpdate.next()
 
 
-# Handler for finishing the update of a tracked order
+# Handler for updating the price of a tracked order
 async def finish_update(message: types.Message, state: FSMContext):
     try:
         async with state.proxy() as data:
@@ -211,12 +158,12 @@ async def finish_update(message: types.Message, state: FSMContext):
         print(f"Ошибка finish_update: {e}")
 
 
-# Handler for initiating the deletion of a tracked order
+# Handler for finishing the update of a tracked order
 async def choice_delete_order(message: types.Message):
     await choice_order(message=message, state=FSMDelete.index_in_page)
 
 
-# Handler for confirming the deletion of a tracked order
+# Handler for initiating the deletion of a tracked order
 async def confirm_delete_order(message: types.Message, state: FSMContext):
     if await get_id(
             message=message,
@@ -228,7 +175,7 @@ async def confirm_delete_order(message: types.Message, state: FSMContext):
         await FSMDelete.next()
 
 
-# Handler for finishing the deletion of a tracked order
+# Handler for confirming the deletion of a tracked order
 async def finish_delete(message: types.Message, state: FSMContext):
     try:
         async with state.proxy() as data:
@@ -243,14 +190,13 @@ async def finish_delete(message: types.Message, state: FSMContext):
         print(f"Ошибка finish_delete: {e}")
 
 
+# Handler for finishing the deletion of a tracked order
 def register_handler_crud(dp: Dispatcher):
     """
         # Register all the handlers with the dispatcher
     """
     dp.register_message_handler(cancel_fsm, state="*", commands="cancel")
     dp.register_message_handler(cancel_fsm, Text(equals='cancel', ignore_case=True), state="*")
-    dp.register_message_handler(view_user_orders, commands=['view'])
-    dp.register_message_handler(next_page_view_orders, commands=['next'])
     dp.register_message_handler(start_create, commands=["tracking"], state=None)
     dp.register_message_handler(check_price, state=FSMCreate.coin)
     dp.register_message_handler(finish_create, state=FSMCreate.price)

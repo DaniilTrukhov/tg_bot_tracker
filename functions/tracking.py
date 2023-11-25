@@ -5,9 +5,10 @@ import time
 
 from data_base import sqlite_db
 from create_bot import bot
+from settings import AllSettings
 
 data_with_names = dict()
-key = "https://api.binance.com/api/v3/ticker/price?symbol="
+key = AllSettings.api_url
 
 
 async def install_names_dict() -> None:
