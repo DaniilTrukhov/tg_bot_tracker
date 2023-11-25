@@ -27,7 +27,7 @@ class FSMDelete(StatesGroup):
     confirm_delete = State()
 
 
-async def cm_start(message: types.Message):
+async def start_create(message: types.Message):
     """
         Command handler for the '/tracking' command.
         Initiates the process of tracking a cryptocurrency price.
@@ -58,7 +58,7 @@ async def check_price(message: types.Message, state: FSMContext):
             await message.answer("Введите абривиатуру одной монеты(пример:btc), или нажмите\n/cancel для отмены")
 
 
-async def write_answer(message: types.Message, state: FSMContext):
+async def finish_create(message: types.Message, state: FSMContext):
     """
         Handler for processing the user's input and registering the tracking of a cryptocurrency.
     """
@@ -71,12 +71,14 @@ async def write_answer(message: types.Message, state: FSMContext):
         await state.finish()
         await message.reply(text="Oтслеживание успешно зарегистрированно",
                             reply_markup=client_kb.tracking_view_price_keyboard)
-    except ValueError as e:
+    except ValueError:
         await state.finish()
         await message.reply(text="Введены не только коректные данные. Можно ввести только цифры (1234567890)"
                                  " и один разделитель целых чисел от дробных (. или ,)")
         await FSMCreate.coin.set()
         await message.answer("введите абривиатуру одной монеты(пример:btc), или нажмите\n/cancel для отмены")
+    except Exception as e:
+        print(f"Ошибка finish_create: {e}")
 
 
 async def cancel_fsm(message: types.Message, state: FSMContext):
@@ -156,7 +158,6 @@ async def get_id(message: types.Message, state: FSMContext, first_part: str,
     """ Common logic for getting the order ID and displaying relevant information """
     try:
         async with state.proxy() as data:
-            # page_number = await sqlite_db.get_page_number(user_id=message.from_user.id)
             page_number = int(message.text) - 1
             user_order = sqlite_db.read_user_tracking(user_id=message.from_user.id, page_number=page_number, count=1)
             data["order_id"] = user_order[0][0]
@@ -165,6 +166,7 @@ async def get_id(message: types.Message, state: FSMContext, first_part: str,
                 await message.answer(text='\n'.join([first_part, answer_string, second_part]),
                                      reply_markup=client_kb.confirm_keyboard)
             else:
+                data["coin_name"] = user_order[0][1]
                 await message.answer(text='\n'.join([first_part, answer_string, second_part]),
                                      reply_markup=types.ReplyKeyboardRemove())
             return True
@@ -182,8 +184,12 @@ async def choice_update_order(message: types.Message):
 
 # Handler for updating the price of a tracked order
 async def update_price_order(message: types.Message, state: FSMContext):
-    if await get_id(message=message, state=state, first_part="Вы обновляете ордер",
-                 second_part="Введите новую цену, или нажмите\n/cancel для отмены"):
+    if await get_id(
+            message=message,
+            state=state,
+            first_part="Вы обновляете ордер",
+            second_part="Введите новую цену, или нажмите\n/cancel для отмены"
+    ):
         await FSMUpdate.next()
 
 
@@ -192,10 +198,13 @@ async def finish_update(message: types.Message, state: FSMContext):
     try:
         async with state.proxy() as data:
             new_price = float(message.text.replace(',', '.').replace(' ', ''))
-            await sqlite_db.update_price_order_in_db(order_id=data["order_id"], new_price=new_price)
+            current_price = await check_the_cost(data["coin_name"])
+            await sqlite_db.update_price_order_in_db(order_id=data["order_id"],
+                                                     current_price=current_price,
+                                                     new_price=new_price)
             await state.finish()
             await message.answer(text="Ордер обновлен", reply_markup=client_kb.tracking_view_price_keyboard)
-    except ValueError as e:
+    except ValueError:
         await message.reply(text="Введены не только коректные данные. Можно ввести только цифры (1234567890)"
                                  " и один разделитель целых чисел от дробных (. или ,)")
     except Exception as e:
@@ -209,8 +218,13 @@ async def choice_delete_order(message: types.Message):
 
 # Handler for confirming the deletion of a tracked order
 async def confirm_delete_order(message: types.Message, state: FSMContext):
-    if await get_id(message=message, state=state, first_part="Вы хотите удалить отслеживание",
-                 second_part="Вы действительно хотите удалить это отслеживание?", delete_flag=True):
+    if await get_id(
+            message=message,
+            state=state,
+            first_part="Вы хотите удалить отслеживание",
+            second_part="Вы действительно хотите удалить это отслеживание?",
+            delete_flag=True
+    ):
         await FSMDelete.next()
 
 
@@ -237,9 +251,9 @@ def register_handler_crud(dp: Dispatcher):
     dp.register_message_handler(cancel_fsm, Text(equals='cancel', ignore_case=True), state="*")
     dp.register_message_handler(view_user_orders, commands=['view'])
     dp.register_message_handler(next_page_view_orders, commands=['next'])
-    dp.register_message_handler(cm_start, commands=["tracking"], state=None)
+    dp.register_message_handler(start_create, commands=["tracking"], state=None)
     dp.register_message_handler(check_price, state=FSMCreate.coin)
-    dp.register_message_handler(write_answer, state=FSMCreate.price)
+    dp.register_message_handler(finish_create, state=FSMCreate.price)
     dp.register_message_handler(choice_update_order, commands=["update"], state=None)
     dp.register_message_handler(update_price_order, state=FSMUpdate.index_in_page)
     dp.register_message_handler(finish_update, state=FSMUpdate.new_price)

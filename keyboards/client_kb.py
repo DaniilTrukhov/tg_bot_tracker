@@ -3,6 +3,7 @@ from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 from data_base import sqlite_db
 from handlers import crud
 
+# Create button
 tracking_button = KeyboardButton("/tracking")
 view_button = KeyboardButton("/view")
 cancel_button = KeyboardButton("/cancel")
@@ -12,13 +13,19 @@ next_button = KeyboardButton("/next")
 update_button = KeyboardButton("/update")
 delete_button = KeyboardButton("/delete")
 price_btc = KeyboardButton("/price_btc")
+return_to_main = KeyboardButton("/main_menu")
 
-
+# Create keyboard
 tracking_view_price_keyboard = ReplyKeyboardMarkup(
     resize_keyboard=True).add(tracking_button).insert(view_button).insert(price_btc)
 tracking_keyboard = ReplyKeyboardMarkup(resize_keyboard=True).add(tracking_button)
 confirm_keyboard = ReplyKeyboardMarkup(resize_keyboard=True).add(yes_button).insert(no_button)
-next_keyboard = ReplyKeyboardMarkup(resize_keyboard=True).add(next_button).insert(update_button).insert(delete_button)
+next_keyboard = (ReplyKeyboardMarkup(resize_keyboard=True)
+                 .add(update_button)
+                 .insert(delete_button)
+                 .add(return_to_main)
+                 .insert(next_button)
+                 )
 
 
 async def create_keyboard(user_id: int) -> ReplyKeyboardMarkup:
@@ -27,7 +34,6 @@ async def create_keyboard(user_id: int) -> ReplyKeyboardMarkup:
 
     Args:
         user_id (int): The ID of the user for whom the keyboard is created.
-
     Returns:
         ReplyKeyboardMarkup: The custom keyboard with buttons representing order numbers.
     """

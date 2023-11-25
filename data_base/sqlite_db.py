@@ -102,11 +102,12 @@ def read_user_tracking(user_id: int, page_number: int, count: int = 1) -> List[T
     try:
         with sqlite3.connect('tgb_base.db', isolation_level=None) as base:
             cursor = base.cursor()
-            cursor.execute("SELECT * FROM orders WHERE archived = FALSE AND user_id = {user_id} LIMIT {count} OFFSET {page_number}".format(
-                user_id=user_id,
-                page_number=page_number,
-                count=count,
-            ))
+            cursor.execute(
+                "SELECT * "
+                "FROM orders "
+                "WHERE archived = FALSE AND user_id = {user_id} "
+                "LIMIT {count} OFFSET {page_number}".format(user_id=user_id, count=count, page_number=page_number)
+            )
             orders = cursor.fetchall()
             return orders
     except Exception as e:
@@ -130,16 +131,16 @@ def read_tracked() -> List:
         print(f"Ошибка при чтении данных\nread_tracked\n: {e}")
 
 
-def update_order(id: int) -> None:
+def archived_order(user_id: int) -> None:
     """
         Updates the tracking order status to 'archived' with the end date.
 
         Args:
-            id (int): The ID of the tracking order to be updated.
+            user_id (int): The ID of the tracking order to be updated.
     """
     try:
         query = "UPDATE orders SET archived = TRUE, end_date = CURRENT_TIMESTAMP WHERE id = ?;"
-        execute_query(query=query, parameters=(id,))
+        execute_query(query=query, parameters=(user_id,))
     except Exception as e:
         print(f"Ошибка выполнения запроса\nupdate_order\n: {e}")
 
@@ -219,29 +220,38 @@ async def update_current_page_number(new_page_number: int, user_id: int) -> None
     try:
         with sqlite3.connect(database='tgb_base.db', isolation_level=None) as base:
             cursor = base.cursor()
-            cursor.execute("UPDATE users SET current_page_number = {new_number} WHERE telegram_user_id = {user_id}".format(
-              new_number=new_page_number,
-              user_id=user_id,
-            ))
+            cursor.execute("UPDATE users "
+                           "SET current_page_number = {new_number} "
+                           "WHERE telegram_user_id = {user_id}".format(new_number=new_page_number, user_id=user_id)
+                           )
     except Exception as e:
         print(f"Ошибка выполнения запроса \nupdate_current_page_number\n: {e}")
 
 
-async def update_price_order_in_db(order_id: int, new_price: float) -> None:
+async def update_price_order_in_db(order_id: int, current_price: float, new_price: float) -> None:
     """
     Asynchronously updates the target price of a tracking order in the database.
 
     Args:
         order_id (int): The ID of the order to be updated.
+        current_price (float): The current price for coin this order.
         new_price (float): The new target price for the order.
     """
     try:
         with sqlite3.connect(database='tgb_base.db', isolation_level=None) as base:
             cursor = base.cursor()
-            cursor.execute("UPDATE orders SET target_price = {new_price} WHERE id = {order_id}".format(
-              new_price=new_price,
-              order_id=order_id,
-            ))
+            if current_price > new_price:
+                uptrend = False
+            else:
+                uptrend = True
+            cursor.execute(
+                "UPDATE orders "
+                "SET target_price = {new_price}, uptrend = {uptrend} WHERE id = {order_id}".format(
+                    new_price=new_price,
+                    uptrend=uptrend,
+                    order_id=order_id,
+                )
+            )
     except Exception as e:
         print(f"Ошибка выполнения запроса на обновление записи: {e}")
 

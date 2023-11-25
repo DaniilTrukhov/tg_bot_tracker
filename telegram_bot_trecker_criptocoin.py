@@ -1,13 +1,13 @@
-import asyncio, schedule
+import asyncio
+import schedule
 
 from aiogram import executor
 from data_base import sqlite_db
 from create_bot import dp
-from handlers import general, crud, other
+from handlers import crud, other
 from functions import tracking
 
 # Register general, crud and other handlers
-general.register_handlers_general(dp=dp)
 crud.register_handler_crud(dp=dp)
 other.register_handlers_other(dp=dp)
 

@@ -1,4 +1,7 @@
-import requests, asyncio, aiohttp, time
+import requests
+import asyncio
+import aiohttp
+import time
 
 from data_base import sqlite_db
 from create_bot import bot
@@ -19,16 +22,20 @@ async def install_names_dict() -> None:
 
 async def return_answer_user(element) -> None:
     """
-        Asynchronously updates the order in the database and sends a message to the user about the coin reaching a specified price level.
+        Asynchronously updates the order in the database and sends a message
+        to the user about the coin reaching a specified price level.
 
         Args:
             element (tuple): A tuple representing the order information.
     """
-    sqlite_db.update_order(id=element[0])
-    await asyncio.create_task(bot.send_message(chat_id=element[7], text=f"Mонета {element[1]} достигла уровня цены в {element[2]} USD"))
+    sqlite_db.archived_order(user_id=element[0])
+    await asyncio.create_task(bot.send_message(
+        chat_id=element[7],
+        text=f"Mонета {element[1]} достигла уровня цены в {element[2]} USD")
+    )
 
 
-async def check_the_cost(currency_name: str) -> float:
+async def check_the_cost(currency_name: str) -> float or None:
     """
         Asynchronously tracks the cost of a cryptocurrency using synchronous requests.
 
@@ -81,7 +88,8 @@ async def check_price(coin_dict: dict) -> dict:
 
 async def tracking_coin() -> None:
     """
-        Asynchronously tracks the prices of tracked cryptocurrencies and sends messages to users if specified price levels are reached.
+        Asynchronously tracks the prices of tracked cryptocurrencies
+        and sends messages to users if specified price levels are reached.
     """
     global data_with_names
     data_with_current_price = await check_price(data_with_names)
