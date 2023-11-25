@@ -85,7 +85,7 @@ async def next_page_view_orders(message: types.Message):
 
 
 # Handler for finishing the deletion of a tracked order
-def register_handler_crud(dp: Dispatcher):
+def register_handler_general(dp: Dispatcher):
     """
         # Register all the handlers with the dispatcher
     """

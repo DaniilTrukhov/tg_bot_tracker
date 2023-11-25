@@ -191,13 +191,13 @@ async def finish_delete(message: types.Message, state: FSMContext):
 
 
 # Handler for finishing the deletion of a tracked order
-def register_handler_crud(dp: Dispatcher):
+def register_handler_general(dp: Dispatcher):
     """
         # Register all the handlers with the dispatcher
     """
     dp.register_message_handler(cancel_fsm, state="*", commands="cancel")
     dp.register_message_handler(cancel_fsm, Text(equals='cancel', ignore_case=True), state="*")
-    dp.register_message_handler(start_create, commands=["tracking"], state=None)
+    dp.register_message_handler(start_create, commands=["track"], state=None)
     dp.register_message_handler(check_price, state=FSMCreate.coin)
     dp.register_message_handler(finish_create, state=FSMCreate.price)
     dp.register_message_handler(choice_update_order, commands=["update"], state=None)

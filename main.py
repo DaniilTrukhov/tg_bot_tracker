@@ -4,11 +4,13 @@ import schedule
 from aiogram import executor
 from data_base import sqlite_db
 from create_bot import dp
-from handlers import crud, other
+from handlers import other, general
 from functions import tracking
+from states import crud_states
 
 # Register general, crud and other handlers
-crud.register_handler_crud(dp=dp)
+crud_states.register_handler_general(dp=dp)
+general.register_handler_general(dp=dp)
 other.register_handlers_other(dp=dp)
 
 

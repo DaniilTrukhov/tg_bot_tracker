@@ -1,10 +1,10 @@
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 
 from data_base import sqlite_db
-from handlers import crud
+from handlers import general
 
 # Create button
-tracking_button = KeyboardButton("/tracking")
+tracking_button = KeyboardButton("/track")
 view_button = KeyboardButton("/view")
 cancel_button = KeyboardButton("/cancel")
 yes_button = KeyboardButton("yes")
@@ -39,8 +39,10 @@ async def create_keyboard(user_id: int) -> ReplyKeyboardMarkup:
     """
     page_number = await sqlite_db.get_page_number(user_id=user_id)
     count_orders = await sqlite_db.count_tracking_user(user_id=user_id)
-    stop_range = crud.count_orders_in_page if (count_orders - page_number >=
-                                               crud.count_orders_in_page) else (count_orders - page_number)
+    if count_orders - page_number >= general.count_orders_in_page:
+        stop_range = general.count_orders_in_page
+    else:
+        stop_range = count_orders - page_number
     choice_order_keyboard = ReplyKeyboardMarkup(resize_keyboard=True)
     for index in range(1, stop_range + 1):
         button_with_number = KeyboardButton(f"{index + page_number}")
